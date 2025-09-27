@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trámites Cancún (con Totales Analíticos)</title> 
+    <style>
+        /* --- MODO OSCURO Y VARIABLES --- */
+        :root {
+            --bg-color-main: #121212;
+            --bg-color-container: #1e1e1e;
+            --text-color: #f5f5f5;
+            --border-color: #333333;
+            --input-bg: #2d2d2d;
+            --input-text: #ffffff;
+            --primary-color: #00bcd4;
+        }
+
+        /* --- ESTILOS BASE (MOBILE FIRST) --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color-main);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Contenedores de ancho completo en móvil */
+        .container, .historial-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: var(--bg-color-container);
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        .saldo-display {
+            font-size: 1.6em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
+            background-color: #292929;
+        }
+        .input-group {
+            margin-bottom: 10px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+
+        /* ESTILOS PARA LOS RESUMENES */
+        .summary-container, .filter-summary {
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            border: 1px dashed var(--primary-color);
+            border-radius: 5px;
+            background-color: #292929;
+            font-size: 0.9em;
+        }
+        .summary-container h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+        .summary-container p, .filter-summary p {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .filter-summary {
+            margin-top: 10px;
+            border: 1px solid var(--border-color); 
+        }
+        
+        /* Inputs, Selects y Botones */
+        input[type="number"], input[type="text"], select, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+            
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg); 
+            color: var(--input-text);
+        }
+        
+        /* Estilos de Botones de Operación */
+        button {
+            cursor: pointer;
+            color: white;
+            border: none;
+            font-weight: bold;
+        }
+        #establecer-btn { background-color: #4CAF50; }
+        #depositar-btn { background-color: #2196F3; }
+        #descontar-btn { background-color: #f44336; }
+        #reiniciar-btn { background-color: #616161; margin-top: 15px; }
+        #exportar-btn { background-color: #00897b; margin-top: 15px; } 
+
+        /* Estilos del Historial y Filtros */
+        #historial-lista {
+            list-style: none;
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        #historial-lista li {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            font-size: 0.9em;
+            position: relative;
+        }
+        .filter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .filter-controls > * {
+            margin: 0;
+        }
+        
+        /* Estilos de elementos en el Historial */
+        .concepto-historial {
+            font-style: italic;
+            color: #9e9e9e;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            word-wrap: break-word;
+        }
+        .detalle-monto {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .fecha-historial {
+            font-size: 0.7em;
+            color: #757575;
+            margin-top: 3px;
+        }
+        .tipo-deposito { color: #4CAF50; font-weight: bold; }
+        .tipo-descuento { color: #f44336; font-weight: bold; }
+        .tipo-inicial { color: var(--primary-color); font-weight: bold; }
+        
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: none;
+            border: none;
+            color: #ff5252;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            width: auto;
+        }
+        
+        /* --- MEDIA QUERY PARA TABLETS Y ESCRITORIO --- */
+        @media (min-width: 768px) {
+            body {
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 30px;
+            }
+            .container { width: 400px; }
+            .historial-container { width: 350px; }
+
+            .filter-controls {
+                flex-direction: row;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⭐ Trámites Cancún</h1>
+
+    <div class="saldo-display">
+        Saldo Actual: $<span id="saldo-actual">0.00</span>
+    </div>
+
+    <div class="summary-container">
+        <h3>Resumen Global</h3>
+        <p>Total Depositado: <span>$<span id="total-depositado">0.00</span></span></p>
+        <p>Total Descontado: <span>$<span id="total-descontado">0.00</span></span></p>
+    </div>
+
+    <div class="input-group">
+        <h2>Establecer Saldo Inicial</h2>
+        <input type="number" id="monto-inicial" placeholder="Monto inicial (ej. 100.00)" min="0">
+        <button id="establecer-btn">Establecer Saldo</button>
+    </div>
+
+    <hr>
+
+    <div class="input-group">
+        <h2>Operaciones</h2>
+        <input type="text" id="concepto-operacion" placeholder="Concepto de la operación" maxlength="50">
+        <input type="number" id="monto-operacion" placeholder="Monto a operar" min="0">
+        
+        <button id="depositar-btn" disabled>💰 Depositar Saldo</button>
+        <button id="descontar-btn" disabled>💸 Descontar Saldo</button>
+        
+        <button id="reiniciar-btn">🔄 Reiniciar Aplicación (Borrar todo)</button>
+    </div>
+    
+    <p class="message" id="mensaje-feedback"></p>
+</div>
+
+<div class="historial-container">
+    <h2>📝 Historial de Transacciones</h2>
+    
+    <div class="filter-controls">
+        <input type="text" id="filtro-concepto" placeholder="Buscar por concepto..." oninput="filtrarHistorial()">
+        <select id="filtro-tipo" onchange="filtrarHistorial()">
+            <option value="Todos">Todos los tipos</option>
+            <option value="Depósito">Depósito</option>
+            <option value="Descuento">Descuento</option>
+            <option value="Inicial">Saldo Inicial</option>
+        </select>
+    </div>
+    
+    <button id="exportar-btn" onclick="exportarAExcel()">⬇️ Exportar Estado de Cuenta (CSV)</button>
+
+    <div class="filter-summary">
+        <p>Monto Total Visible: <span>$<span id="monto-visible">0.00</span></span></p>
+    </div>
+
+    <ul id="historial-lista">
+        <li>Cargando datos...</li>
+    </ul>
+</div>
+
+<script>
+    // --- Lógica JavaScript con LocalStorage ---
+    
+    // Claves para el LocalStorage
+    const SALDO_KEY = 'gestorSaldo_saldo';
+    const HISTORIAL_KEY = 'gestorSaldo_historial';
+    // Se elimina la clave de CATEGORIAS
+
+    // Referencias a los elementos del DOM
+    const saldoActualSpan = document.getElementById('saldo-actual');
+    const montoInicialInput = document.getElementById('monto-inicial');
+    const establecerBtn = document.getElementById('establecer-btn');
+    
+    // Se elimina la referencia a categoriaOperacionInput
+    
+    const conceptoOperacionInput = document.getElementById('concepto-operacion');
+    const montoOperacionInput = document.getElementById('monto-operacion');
+    const depositarBtn = document.getElementById('depositar-btn');
+    const descontarBtn = document.getElementById('descontar-btn');
+    const reiniciarBtn = document.getElementById('reiniciar-btn');
+    const mensajeFeedbackP = document.getElementById('mensaje-feedback');
+    const historialListaUL = document.getElementById('historial-lista');
+    
+    const filtroConceptoInput = document.getElementById('filtro-concepto');
+    const filtroTipoSelect = document.getElementById('filtro-tipo');
+    // Se elimina la referencia a filtroCategoriaSelect
+    
+    const totalDepositadoSpan = document.getElementById('total-depositado');
+    const totalDescontadoSpan = document.getElementById('total-descontado');
+    const montoVisibleSpan = document.getElementById('monto-visible');
+
+    // Variables de estado
+    let saldo = 0;
+    let transacciones = [];
+    let transaccionesVisibles = []; 
+    // Se elimina el array categoriasGuardadas
+
+    // --- Funciones de Persistencia ---
+    function guardarDatos() {
+        localStorage.setItem(SALDO_KEY, saldo.toString()); 
+        localStorage.setItem(HISTORIAL_KEY, JSON.stringify(transacciones)); 
+        // Se elimina el guardado de categorias
+    }
+
+    function cargarDatos() {
+        const saldoGuardado = localStorage.getItem(SALDO_KEY);
+        if (saldoGuardado !== null) {
+            saldo = parseFloat(saldoGuardado);
+        }
+
+        const historialGuardado = localStorage.getItem(HISTORIAL_KEY);
+        if (historialGuardado !== null) {
+            try {
+                const loadedTransacciones = JSON.parse(historialGuardado);
+                transacciones = loadedTransacciones.map(t => ({
+                    ...t,
+                    concepto: t.concepto || (t.tipo === 'Inicial' ? 'Saldo Inicial' : 'Sin concepto'),
+                    timestamp: t.timestamp || new Date().toLocaleString()
+                }));
+                
+                // Asegurar IDs únicos y eliminar la propiedad 'categoria' de las transacciones antiguas
+                transacciones.forEach((t, index) => {
+                    if (!t.id) {
+                        t.id = t.timestamp + '-' + index; 
+                    }
+                    delete t.categoria; // Limpieza importante
+                });
+
+            } catch (e) {
+                console.error("Error al parsear el historial de LocalStorage:", e);
+                transacciones = [];
+            }
+        }
+        
+        // Se elimina la carga de categorías
+    }
+
+    function restablecerAplicacion() {
+        saldo = 0;
+        transacciones = [];
+
+        localStorage.removeItem(SALDO_KEY);
+        localStorage.removeItem(HISTORIAL_KEY);
+        // Se elimina la limpieza de CATEGORIAS_KEY
+        
+        actualizarDisplaySaldo();
+        calcularTotalesGlobales(); 
+        filtrarHistorial(); 
+        mostrarMensaje('La aplicación ha sido reiniciada. Saldo y historial borrados.', 'error');
+
+        montoInicialInput.value = '';
+        montoOperacionInput.value = '';
+        conceptoOperacionInput.value = '';
+        filtroConceptoInput.value = ''; 
+        filtroTipoSelect.value = 'Todos'; 
+    }
+
+    // --- Funciones de Categoría (ELIMINADAS) ---
+    // (Se eliminaron guardarNuevaCategoria, cargarCategoriasDatalist, cargarFiltroCategorias)
+
+
+    // --- Funciones de UI/Lógica ---
+
+    function calcularTotalesGlobales() {
+        let totalDepositos = 0;
+        let totalDescuentos = 0;
+
+        transacciones.forEach(t => {
+            if (t.tipo === 'Depósito' || t.tipo === 'Inicial') {
+                totalDepositos += t.monto;
+            } else if (t.tipo === 'Descuento') {
+                totalDescuentos += t.monto;
+            }
+        });
+
+        totalDepositadoSpan.textContent = totalDepositos.toFixed(2);
+        totalDescontadoSpan.textContent = totalDescuentos.toFixed(2);
+    }
+    
+    function actualizarDisplaySaldo() {
+        // (Lógica de display y habilitación/deshabilitación de botones)
+        saldoActualSpan.textContent = saldo.toFixed(2);
+        const tieneSaldo = saldo > 0;
+        
+        depositarBtn.disabled = false;
+        descontarBtn.disabled = !tieneSaldo;
+
+        if (saldo > 0 && transacciones.some(t => t.tipo === 'Inicial')) {
+            montoInicialInput.disabled = true;
+            establecerBtn.disabled = true;
+        } else {
+            montoInicialInput.disabled = false;
+            establecerBtn.disabled = false;
+        }
+    }
+
+
+    /**
+     * FUNCIÓN RESTAURADA: No requiere la categoría.
+     */
+    function añadirTransaccion(tipo, monto, saldoNuevo, concepto) {
+        const date = new Date();
+        const timestamp = date.toLocaleString('es-MX', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const transaccion = { 
+            id: date.getTime(), 
+            tipo, 
+            monto, 
+            saldoNuevo, 
+            concepto: concepto || (tipo === 'Inicial' ? 'Saldo Inicial' : 'Sin concepto'),
+            timestamp 
+        };
+        
+        transacciones.unshift(transaccion);
+        
+        guardarDatos(); 
+        calcularTotalesGlobales(); 
+        filtrarHistorial(); 
+    }
+
+    window.eliminarTransaccion = function(id) {
+        // (Lógica de eliminación y reversión de saldo, se mantiene igual)
+        const indice = transacciones.findIndex(t => t.id == id);
+        
+        if (indice === -1) {
+            mostrarMensaje('Error: Transacción no encontrada.', 'error');
+            return;
+        }
+
+        if (confirm('¿Estás seguro de que quieres eliminar esta transacción? Esto afectará tu saldo actual.')) {
+            const transaccionEliminada = transacciones[indice];
+            const monto = transaccionEliminada.monto;
+            const tipo = transaccionEliminada.tipo;
+
+            if (tipo === 'Depósito') {
+                saldo -= monto;
+            } else if (tipo === 'Descuento') {
+                saldo += monto;
+            } else if (tipo === 'Inicial') {
+                saldo = 0;
+            }
+
+            transacciones.splice(indice, 1);
+
+            actualizarDisplaySaldo();
+            calcularTotalesGlobales(); 
+            guardarDatos();
+            filtrarHistorial();
+            mostrarMensaje(`Transacción (${tipo}) eliminada y saldo actualizado.`, 'success');
+        }
+    }
+
+    /**
+     * FUNCIÓN RESTAURADA: Solo filtra por Concepto y Tipo.
+     */
+    window.filtrarHistorial = function() {
+        const conceptoBusqueda = filtroConceptoInput.value.toLowerCase().trim();
+        const tipoFiltro = filtroTipoSelect.value;
+        // Se elimina la variable de categoriaFiltro
+
+        const transaccionesFiltradas = transacciones.filter(t => {
+            let coincideConcepto = true;
+            let coincideTipo = true;
+
+            // 1. Filtrar por Concepto
+            if (conceptoBusqueda) {
+                coincideConcepto = t.concepto.toLowerCase().includes(conceptoBusqueda);
+            }
+
+            // 2. Filtrar por Tipo
+            if (tipoFiltro !== 'Todos') {
+                coincideTipo = t.tipo === tipoFiltro;
+            }
+            
+            return coincideConcepto && coincideTipo;
+        });
+        
+        transaccionesVisibles = transaccionesFiltradas; 
+        
+        let montoTotalVisible = 0;
+        transaccionesVisibles.forEach(t => {
+            montoTotalVisible += Math.abs(t.monto);
+        });
+        
+        montoVisibleSpan.textContent = montoTotalVisible.toFixed(2);
+        renderizarHistorial(transaccionesFiltradas);
+    }
+    
+
+    /**
+     * FUNCIÓN RESTAURADA: No muestra la categoría en la lista.
+     */
+    function renderizarHistorial(arr = transacciones) {
+        historialListaUL.innerHTML = ''; 
+
+        if (arr.length === 0) {
+            historialListaUL.innerHTML = `<li>${transacciones.length === 0 ? 'Aún no hay transacciones registradas.' : 'No se encontraron resultados para el filtro actual.'}</li>`;
+            return;
+        }
+
+        arr.forEach(t => {
+            const li = document.createElement('li');
+            let claseTipo = '';
+            let simbolo = '';
+
+            if (t.tipo === 'Inicial') {
+                claseTipo = 'tipo-inicial';
+                simbolo = '✅';
+            } else if (t.tipo === 'Depósito') {
+                claseTipo = 'tipo-deposito';
+                simbolo = '+';
+            } else if (t.tipo === 'Descuento') {
+                claseTipo = 'tipo-descuento';
+                simbolo = '-';
+            }
+
+            li.innerHTML = `
+                <button class="delete-btn" onclick="eliminarTransaccion(${t.id})">🗑️</button>
+                <div class="concepto-historial">${t.concepto}</div>
+                <div class="detalle-monto">
+                    <span class="${claseTipo}">${t.tipo}</span>
+                    <span class="${claseTipo}">${simbolo} ${Math.abs(t.monto).toFixed(2)}</span>
+                </div>
+                <div class="fecha-historial">${t.timestamp}</div>
+            `;
+            historialListaUL.appendChild(li);
+        });
+    }
+
+    // --- Event Listeners (Restaurados) ---
+
+    establecerBtn.addEventListener('click', () => {
+        const monto = parseFloat(montoInicialInput.value);
+        
+        if (isNaN(monto) || monto < 0) {
+            mostrarMensaje('El monto inicial debe ser un número positivo.', 'error');
+            return;
+        }
+
+        saldo = monto;
+        if (!transacciones.some(t => t.tipo === 'Inicial')) {
+             añadirTransaccion('Inicial', monto, saldo, 'Establecimiento de Saldo Inicial');
+        } else {
+            guardarDatos(); 
+            calcularTotalesGlobales(); 
+            filtrarHistorial();
+        }
+
+        actualizarDisplaySaldo();
+        mostrarMensaje(`Saldo inicial establecido en $${monto.toFixed(2)}.`, 'success');
+        montoInicialInput.value = '';
+    });
+
+    depositarBtn.addEventListener('click', () => {
+        const monto = parseFloat(montoOperacionInput.value);
+        const concepto = conceptoOperacionInput.value.trim();
+        // Se elimina la captura de la categoría
+
+        if (isNaN(monto) || monto <= 0) {
+            mostrarMensaje('Por favor, introduce un monto a depositar válido (mayor que 0).', 'error');
+            return;
+        }
+        
+        if (!transacciones.some(t => t.tipo === 'Inicial')) {
+             mostrarMensaje('Primero debes establecer el saldo inicial.', 'error');
+             return;
+        }
+
+        saldo += monto;
+        actualizarDisplaySaldo();
+        añadirTransaccion('Depósito', monto, saldo, concepto);
+        mostrarMensaje(`Se depositaron $${monto.toFixed(2)}.`, 'success');
+        montoOperacionInput.value = '';
+        conceptoOperacionInput.value = '';
+    });
+
+    descontarBtn.addEventListener('click', () => {
+        const descuento = parseFloat(montoOperacionInput.value);
+        const concepto = conceptoOperacionInput.value.trim();
+        // Se elimina la captura de la categoría
+
+        if (isNaN(descuento) || descuento <= 0) {
+            mostrarMensaje('Por favor, introduce un monto a descontar válido (mayor que 0).', 'error');
+            return;
+        }
+
+        if (descuento > saldo) {
+            mostrarMensaje(`Error: Saldo insuficiente. Saldo actual: $${saldo.toFixed(2)}.`, 'error');
+            return;
+        }
+        
+        if (!transacciones.some(t => t.tipo === 'Inicial')) {
+             mostrarMensaje('Primero debes establecer el saldo inicial.', 'error');
+             return;
+        }
+
+        saldo -= descuento;
+        actualizarDisplaySaldo();
+        añadirTransaccion('Descuento', descuento, saldo, concepto);
+        mostrarMensaje(`Se descontaron $${descuento.toFixed(2)}.`, 'success');
+        montoOperacionInput.value = '';
+        conceptoOperacionInput.value = '';
+    });
+
+    reiniciarBtn.addEventListener('click', () => {
+        if (confirm('¿Estás seguro de que quieres reiniciar? Esto borrará el saldo actual y todo el historial de forma permanente.')) {
+            restablecerAplicacion();
+        }
+    });
+
+    // --- Función de Exportación (Restaurada, solo exporta los campos originales) ---
+
+    window.exportarAExcel = function() {
+        if (transaccionesVisibles.length === 0) {
+            mostrarMensaje('No hay transacciones para exportar. Intenta agregar o quitar filtros.', 'error');
+            return;
+        }
+        
+        let csv = 'Fecha/Hora,Tipo,Concepto,Monto,Saldo Despues\n'; 
+
+        transaccionesVisibles.forEach(t => {
+            const montoFormateado = (t.tipo === 'Descuento' ? '-' : (t.tipo === 'Depósito' ? '+' : '')) + Math.abs(t.monto).toFixed(2);
+            
+            // Se elimina la exportación de t.categoria
+            csv += `${t.timestamp},${t.tipo},"${t.concepto}",${montoFormateado},${t.saldoNuevo.toFixed(2)}\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        
+        const link = document.createElement("a");
+        if (link.download !== undefined) { 
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            
+            const today = new Date().toISOString().slice(0, 10);
+            link.setAttribute("download", `Estado_Cuenta_Cancun_${today}.csv`);
+            
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            mostrarMensaje('Exportación exitosa. Revisa tu carpeta de descargas.', 'success');
+        } else {
+            mostrarMensaje('Tu navegador no soporta la descarga automática. Intenta con Chrome o Safari.', 'error');
+        }
+    }
+
+    // --- Inicialización ---
+
+    cargarDatos();
+    calcularTotalesGlobales(); 
+    actualizarDisplaySaldo();
+    filtrarHistorial();
+
+</script>
+
+</body>
+</html>
